@@ -24,8 +24,8 @@ jobs:
           mkdir -p _site/dalabengba _site/thumbnails
           cp index.html styles.css reader.js favicon.svg .nojekyll _site/
           for page in $(seq -w 1 42); do
-            cp "dalabengba/P${page}.png" _site/dalabengba/
-            cp "thumbnails/P${page}.jpg" _site/thumbnails/
+            cp "dalabengba/P${page}.webp" _site/dalabengba/
+            cp "thumbnails/P${page}.webp" _site/thumbnails/
           done
 
       - name: Configure Pages

@@ -8,7 +8,7 @@ const continuousPages = $('continuous-pages');
 const dialog = $('pages-dialog');
 const grid = $('thumbnail-grid');
 const fileName = page => `P${String(page).padStart(2, '0')}`;
-const pageSrc = page => `dalabengba/${fileName(page)}.png`;
+const pageSrc = page => `dalabengba/${fileName(page)}.webp`;
 const validPage = page => Number.isInteger(page) && page >= 1 && page <= TOTAL_PAGES;
 const hashPage = () => { const match = location.hash.match(/^#p=(\d+)$/); return match ? Number(match[1]) : null; };
 const load = key => { try { return localStorage.getItem(key); } catch { return null; } };
@@ -147,7 +147,7 @@ for (let page = 1; page <= TOTAL_PAGES; page++) {
   button.className = 'thumbnail';
   button.dataset.page = String(page);
   button.setAttribute('aria-label', `跳到第 ${page} 頁`);
-  button.innerHTML = `<img src="thumbnails/${fileName(page)}.jpg" alt="" loading="lazy" width="187" height="280"><span>第 ${String(page).padStart(2, '0')} 頁</span>`;
+  button.innerHTML = `<img src="thumbnails/${fileName(page)}.webp" alt="" loading="lazy" width="187" height="280"><span>第 ${String(page).padStart(2, '0')} 頁</span>`;
   button.addEventListener('click', () => { dialog.close(); navigate(page); });
   grid.append(button);
 }
