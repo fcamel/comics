@@ -2,9 +2,6 @@ const TOTAL_PAGES = 42;
 const KEYS = { page: 'dalabengba-last-page', mode: 'dalabengba-reading-mode', fit: 'dalabengba-fit-mode' };
 const $ = id => document.getElementById(id);
 const image = $('comic-image');
-const previous = $('previous');
-const next = $('next');
-const endNext = $('end-next');
 const readingBar = document.querySelector('.reading-bar');
 const singlePages = $('page-shell');
 const continuousPages = $('continuous-pages');
@@ -28,11 +25,6 @@ function updatePageStatus(page, updateHistory = true) {
   if (!validPage(page)) return;
   currentPage = page;
   $('page-number').textContent = String(page).padStart(2, '0');
-  $('end-page-label').textContent = `第 ${page} 頁，共 ${TOTAL_PAGES} 頁`;
-  previous.disabled = page === 1;
-  next.disabled = page === TOTAL_PAGES;
-  endNext.disabled = page === TOTAL_PAGES;
-  endNext.innerHTML = page === TOTAL_PAGES ? '已讀完' : '下一頁 <span aria-hidden="true">→</span>';
   $('progress').setAttribute('aria-valuenow', String(page));
   $('progress-fill').style.width = `${page / TOTAL_PAGES * 100}%`;
   grid.querySelectorAll('.thumbnail').forEach(button => {
@@ -97,7 +89,6 @@ function setReadingMode(mode, initial = false) {
   if (mode === 'continuous') buildContinuousPages();
   singlePages.hidden = mode !== 'single';
   continuousPages.hidden = mode !== 'continuous';
-  document.querySelector('.end-controls').hidden = mode === 'continuous';
   $('reader-hint').textContent = mode === 'continuous' ? '向下捲動閱讀；也可使用 ← → 跳至前後頁' : '圖片左鍵下一頁、右鍵上一頁；亦可用 ← → 或左右滑動';
   document.querySelectorAll('[data-mode]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.mode === mode)));
   save(KEYS.mode, mode);
@@ -129,9 +120,6 @@ function trackContinuousPage() {
   if (visiblePage !== currentPage) updatePageStatus(visiblePage);
 }
 
-previous.addEventListener('click', () => navigate(currentPage - 1));
-next.addEventListener('click', () => navigate(currentPage + 1));
-endNext.addEventListener('click', () => navigate(currentPage + 1));
 $('retry').addEventListener('click', () => { image.src = `${pageSrc(currentPage)}?retry=${Date.now()}`; image.hidden = false; $('image-error').hidden = true; });
 image.addEventListener('error', () => { image.hidden = true; $('image-error').hidden = false; });
 image.addEventListener('load', () => { image.hidden = false; $('image-error').hidden = true; });
@@ -195,9 +183,8 @@ window.addEventListener('hashchange', () => {
 
 function updateReaderSize() {
   const barHeight = readingBar.offsetHeight;
-  const headerHeight = document.querySelector('.site-header').offsetHeight;
   document.documentElement.style.setProperty('--reader-bar-height', `${barHeight}px`);
-  const availableHeight = Math.max(240, innerHeight - barHeight - headerHeight - 24);
+  const availableHeight = Math.max(240, innerHeight - barHeight - 24);
   document.documentElement.style.setProperty('--fit-height-width', `${Math.floor(availableHeight * 2 / 3)}px`);
 }
 new ResizeObserver(updateReaderSize).observe(readingBar);
