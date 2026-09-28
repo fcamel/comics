@@ -16,8 +16,8 @@ const save = (key, value) => { try { localStorage.setItem(key, String(value)); }
 
 const savedPage = Number(load(KEYS.page));
 let currentPage = validPage(hashPage()) ? hashPage() : validPage(savedPage) ? savedPage : 1;
-let readingMode = load(KEYS.mode) === 'continuous' ? 'continuous' : 'single';
-let fitMode = ['default', 'width', 'height'].includes(load(KEYS.fit)) ? load(KEYS.fit) : 'default';
+let readingMode = load(KEYS.mode) === 'single' ? 'single' : 'continuous';
+let fitMode = ['default', 'width', 'height'].includes(load(KEYS.fit)) ? load(KEYS.fit) : 'height';
 let continuousBuilt = false;
 let scrollFrame = 0;
 
@@ -162,16 +162,23 @@ document.addEventListener('keydown', event => {
 
 let touchStart = null;
 singlePages.addEventListener('touchstart', event => {
-  if (event.touches.length === 1) touchStart = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+  touchStart = event.touches.length === 1 ? {
+    x: event.touches[0].clientX,
+    y: event.touches[0].clientY,
+    time: Date.now(),
+    onImage: event.target === image
+  } : null;
 }, { passive: true });
 singlePages.addEventListener('touchend', event => {
   lastTouchTime = Date.now();
-  if (!touchStart || event.changedTouches.length !== 1) return;
+  if (!touchStart || event.changedTouches.length !== 1) { touchStart = null; return; }
   const dx = event.changedTouches[0].clientX - touchStart.x;
   const dy = event.changedTouches[0].clientY - touchStart.y;
   if (Math.abs(dx) > 65 && Math.abs(dx) > Math.abs(dy) * 1.5) navigate(currentPage + (dx < 0 ? 1 : -1));
+  else if (touchStart.onImage && Math.abs(dx) < 12 && Math.abs(dy) < 12 && Date.now() - touchStart.time < 500) navigate(currentPage + 1);
   touchStart = null;
 }, { passive: true });
+singlePages.addEventListener('touchcancel', () => { touchStart = null; }, { passive: true });
 
 window.addEventListener('scroll', () => {
   if (readingMode === 'continuous' && !scrollFrame) scrollFrame = requestAnimationFrame(trackContinuousPage);
