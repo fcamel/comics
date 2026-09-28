@@ -1,0 +1,211 @@
+const TOTAL_PAGES = 42;
+const KEYS = { page: 'dalabengba-last-page', mode: 'dalabengba-reading-mode', fit: 'dalabengba-fit-mode' };
+const $ = id => document.getElementById(id);
+const image = $('comic-image');
+const previous = $('previous');
+const next = $('next');
+const endNext = $('end-next');
+const readingBar = document.querySelector('.reading-bar');
+const singlePages = $('page-shell');
+const continuousPages = $('continuous-pages');
+const dialog = $('pages-dialog');
+const grid = $('thumbnail-grid');
+const fileName = page => `P${String(page).padStart(2, '0')}`;
+const pageSrc = page => `dalabengba/${fileName(page)}.png`;
+const validPage = page => Number.isInteger(page) && page >= 1 && page <= TOTAL_PAGES;
+const hashPage = () => { const match = location.hash.match(/^#p=(\d+)$/); return match ? Number(match[1]) : null; };
+const load = key => { try { return localStorage.getItem(key); } catch { return null; } };
+const save = (key, value) => { try { localStorage.setItem(key, String(value)); } catch { /* Storage may be unavailable. */ } };
+
+const savedPage = Number(load(KEYS.page));
+let currentPage = validPage(hashPage()) ? hashPage() : validPage(savedPage) ? savedPage : 1;
+let readingMode = load(KEYS.mode) === 'continuous' ? 'continuous' : 'single';
+let fitMode = ['default', 'width', 'height'].includes(load(KEYS.fit)) ? load(KEYS.fit) : 'default';
+let continuousBuilt = false;
+let scrollFrame = 0;
+
+function updatePageStatus(page, updateHistory = true) {
+  if (!validPage(page)) return;
+  currentPage = page;
+  $('page-number').textContent = String(page).padStart(2, '0');
+  $('end-page-label').textContent = `第 ${page} 頁，共 ${TOTAL_PAGES} 頁`;
+  previous.disabled = page === 1;
+  next.disabled = page === TOTAL_PAGES;
+  endNext.disabled = page === TOTAL_PAGES;
+  endNext.innerHTML = page === TOTAL_PAGES ? '已讀完' : '下一頁 <span aria-hidden="true">→</span>';
+  $('progress').setAttribute('aria-valuenow', String(page));
+  $('progress-fill').style.width = `${page / TOTAL_PAGES * 100}%`;
+  grid.querySelectorAll('.thumbnail').forEach(button => {
+    if (Number(button.dataset.page) === page) button.setAttribute('aria-current', 'page');
+    else button.removeAttribute('aria-current');
+  });
+  save(KEYS.page, page);
+  if (updateHistory) history.replaceState(null, '', `#p=${page}`);
+}
+
+function renderSingle(page, scroll = true) {
+  image.hidden = false;
+  $('image-error').hidden = true;
+  if (image.getAttribute('src') !== pageSrc(page)) image.src = pageSrc(page);
+  image.alt = `《達拉崩吧》第 ${page} 頁，共 ${TOTAL_PAGES} 頁`;
+  if (scroll) window.scrollTo({ top: 0, behavior: 'instant' });
+  for (const adjacent of [page + 1, page - 1]) {
+    if (validPage(adjacent)) new Image().src = pageSrc(adjacent);
+  }
+}
+
+function buildContinuousPages() {
+  if (continuousBuilt) return;
+  const fragment = document.createDocumentFragment();
+  for (let page = 1; page <= TOTAL_PAGES; page++) {
+    const figure = document.createElement('figure');
+    figure.className = 'comic-page continuous-page';
+    figure.dataset.page = String(page);
+    figure.innerHTML = `<span class="continuous-label">${String(page).padStart(2, '0')} / ${TOTAL_PAGES}</span><img src="${pageSrc(page)}" alt="《達拉崩吧》第 ${page} 頁" width="1024" height="1536" loading="lazy" decoding="async"><div class="continuous-error" hidden><p>第 ${page} 頁暫時無法載入。</p><button class="retry-button" type="button">重新載入</button></div>`;
+    const pageImage = figure.querySelector('img');
+    const pageError = figure.querySelector('.continuous-error');
+    pageImage.addEventListener('error', () => { pageImage.hidden = true; pageError.hidden = false; });
+    pageImage.addEventListener('load', () => { pageImage.hidden = false; pageError.hidden = true; });
+    pageError.querySelector('button').addEventListener('click', () => {
+      pageImage.src = `${pageSrc(page)}?retry=${Date.now()}`;
+      pageImage.hidden = false;
+      pageError.hidden = true;
+    });
+    fragment.append(figure);
+  }
+  continuousPages.append(fragment);
+  continuousBuilt = true;
+}
+
+function scrollToPage(page) {
+  const target = continuousPages.children[page - 1];
+  if (!target) return;
+  const top = window.scrollY + target.getBoundingClientRect().top - readingBar.offsetHeight - 8;
+  window.scrollTo({ top: Math.max(0, top), behavior: 'instant' });
+}
+
+function navigate(page, updateHistory = true) {
+  if (!validPage(page)) return;
+  updatePageStatus(page, updateHistory);
+  if (readingMode === 'continuous') scrollToPage(page);
+  else renderSingle(page);
+}
+
+function setReadingMode(mode, initial = false) {
+  if (!['single', 'continuous'].includes(mode)) return;
+  readingMode = mode;
+  if (mode === 'continuous') buildContinuousPages();
+  singlePages.hidden = mode !== 'single';
+  continuousPages.hidden = mode !== 'continuous';
+  document.querySelector('.end-controls').hidden = mode === 'continuous';
+  $('reader-hint').textContent = mode === 'continuous' ? '向下捲動閱讀；也可使用 ← → 跳至前後頁' : '圖片左鍵下一頁、右鍵上一頁；亦可用 ← → 或左右滑動';
+  document.querySelectorAll('[data-mode]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.mode === mode)));
+  save(KEYS.mode, mode);
+  if (!initial) {
+    if (mode === 'continuous') requestAnimationFrame(() => scrollToPage(currentPage));
+    else renderSingle(currentPage);
+  }
+}
+
+function setFitMode(fit, initial = false) {
+  if (!['default', 'width', 'height'].includes(fit)) return;
+  fitMode = fit;
+  document.body.dataset.fit = fit;
+  document.querySelectorAll('[data-fit]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.fit === fit)));
+  save(KEYS.fit, fit);
+  if (!initial && readingMode === 'continuous') requestAnimationFrame(() => scrollToPage(currentPage));
+}
+
+function trackContinuousPage() {
+  scrollFrame = 0;
+  if (readingMode !== 'continuous') return;
+  const line = readingBar.getBoundingClientRect().bottom + Math.min((innerHeight - readingBar.offsetHeight) * .25, 180);
+  let visiblePage = 1;
+  for (const figure of continuousPages.children) {
+    const rect = figure.getBoundingClientRect();
+    if (rect.top <= line) visiblePage = Number(figure.dataset.page);
+    if (rect.bottom > line) break;
+  }
+  if (visiblePage !== currentPage) updatePageStatus(visiblePage);
+}
+
+previous.addEventListener('click', () => navigate(currentPage - 1));
+next.addEventListener('click', () => navigate(currentPage + 1));
+endNext.addEventListener('click', () => navigate(currentPage + 1));
+$('retry').addEventListener('click', () => { image.src = `${pageSrc(currentPage)}?retry=${Date.now()}`; image.hidden = false; $('image-error').hidden = true; });
+image.addEventListener('error', () => { image.hidden = true; $('image-error').hidden = false; });
+image.addEventListener('load', () => { image.hidden = false; $('image-error').hidden = true; });
+let lastTouchTime = 0;
+image.addEventListener('click', event => {
+  if (readingMode !== 'single' || event.button !== 0 || Date.now() - lastTouchTime < 700) return;
+  if ('pointerType' in event && event.pointerType && event.pointerType !== 'mouse') return;
+  navigate(currentPage + 1);
+});
+image.addEventListener('contextmenu', event => {
+  if (readingMode !== 'single') return;
+  if ('pointerType' in event && event.pointerType && event.pointerType !== 'mouse') return;
+  event.preventDefault();
+  navigate(currentPage - 1);
+});
+document.querySelectorAll('[data-mode]').forEach(button => button.addEventListener('click', () => setReadingMode(button.dataset.mode)));
+document.querySelectorAll('[data-fit]').forEach(button => button.addEventListener('click', () => setFitMode(button.dataset.fit)));
+$('open-pages').addEventListener('click', () => dialog.showModal());
+$('close-pages').addEventListener('click', () => dialog.close());
+dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
+
+for (let page = 1; page <= TOTAL_PAGES; page++) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'thumbnail';
+  button.dataset.page = String(page);
+  button.setAttribute('aria-label', `跳到第 ${page} 頁`);
+  button.innerHTML = `<img src="thumbnails/${fileName(page)}.jpg" alt="" loading="lazy" width="187" height="280"><span>第 ${String(page).padStart(2, '0')} 頁</span>`;
+  button.addEventListener('click', () => { dialog.close(); navigate(page); });
+  grid.append(button);
+}
+
+document.addEventListener('keydown', event => {
+  if (dialog.open || event.altKey || event.ctrlKey || event.metaKey || ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
+  if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+    event.preventDefault();
+    navigate(currentPage + (event.key === 'ArrowRight' ? 1 : -1));
+  }
+});
+
+let touchStart = null;
+singlePages.addEventListener('touchstart', event => {
+  if (event.touches.length === 1) touchStart = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+}, { passive: true });
+singlePages.addEventListener('touchend', event => {
+  lastTouchTime = Date.now();
+  if (!touchStart || event.changedTouches.length !== 1) return;
+  const dx = event.changedTouches[0].clientX - touchStart.x;
+  const dy = event.changedTouches[0].clientY - touchStart.y;
+  if (Math.abs(dx) > 65 && Math.abs(dx) > Math.abs(dy) * 1.5) navigate(currentPage + (dx < 0 ? 1 : -1));
+  touchStart = null;
+}, { passive: true });
+
+window.addEventListener('scroll', () => {
+  if (readingMode === 'continuous' && !scrollFrame) scrollFrame = requestAnimationFrame(trackContinuousPage);
+}, { passive: true });
+window.addEventListener('hashchange', () => {
+  const page = hashPage();
+  if (validPage(page) && page !== currentPage) navigate(page, false);
+});
+
+function updateReaderSize() {
+  const barHeight = readingBar.offsetHeight;
+  const headerHeight = document.querySelector('.site-header').offsetHeight;
+  document.documentElement.style.setProperty('--reader-bar-height', `${barHeight}px`);
+  const availableHeight = Math.max(240, innerHeight - barHeight - headerHeight - 24);
+  document.documentElement.style.setProperty('--fit-height-width', `${Math.floor(availableHeight * 2 / 3)}px`);
+}
+new ResizeObserver(updateReaderSize).observe(readingBar);
+window.addEventListener('resize', updateReaderSize);
+updateReaderSize();
+setFitMode(fitMode, true);
+setReadingMode(readingMode, true);
+if (currentPage !== 1) $('first-page-preload').remove();
+updatePageStatus(currentPage, !validPage(hashPage()));
+if (readingMode === 'continuous') requestAnimationFrame(() => scrollToPage(currentPage));
+else renderSingle(currentPage, false);

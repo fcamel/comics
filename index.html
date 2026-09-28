@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#111111" />
+    <meta name="description" content="閱讀《達拉崩吧》全 42 頁漫畫。" />
+    <title>達拉崩吧 · 漫畫閱讀</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="preload" as="image" href="dalabengba/P01.png" id="first-page-preload" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="reader.js" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="brand" aria-label="達拉崩吧">
+        <span class="brand-mark" aria-hidden="true">✦</span>
+        <span>達拉崩吧</span>
+      </div>
+      <div class="header-right">
+        <span class="chapter-label">全 42 頁</span>
+        <button class="text-button" id="open-pages" type="button" aria-haspopup="dialog">頁面一覽 <span aria-hidden="true">▦</span></button>
+      </div>
+    </header>
+
+    <main id="reader">
+      <div class="reading-bar" aria-label="閱讀導覽">
+        <div class="reading-bar-inner">
+          <button class="nav-button" id="previous" type="button" aria-label="上一頁"><span aria-hidden="true">←</span><span class="nav-word">上一頁</span></button>
+          <div class="page-status" aria-live="polite"><span class="status-label">正在閱讀</span><strong id="page-number">01</strong><span class="status-total">/ 42</span></div>
+          <button class="nav-button" id="next" type="button" aria-label="下一頁"><span class="nav-word">下一頁</span><span aria-hidden="true">→</span></button>
+        </div>
+        <div class="view-controls">
+          <div class="control-group" role="group" aria-label="閱讀方式">
+            <button type="button" data-mode="single" aria-pressed="true">單頁</button>
+            <button type="button" data-mode="continuous" aria-pressed="false">連續閱讀</button>
+          </div>
+          <div class="control-group" role="group" aria-label="顯示倍率">
+            <button type="button" data-fit="default" aria-pressed="true">預設</button>
+            <button type="button" data-fit="width" aria-pressed="false">適合寬度</button>
+            <button type="button" data-fit="height" aria-pressed="false">適合高度</button>
+          </div>
+        </div>
+        <div class="progress-track" role="progressbar" aria-label="閱讀進度" aria-valuemin="1" aria-valuemax="42" aria-valuenow="1" id="progress"><span id="progress-fill"></span></div>
+      </div>
+
+      <div class="page-shell" id="page-shell">
+        <figure class="comic-page">
+          <img id="comic-image" src="dalabengba/P01.png" alt="《達拉崩吧》第 1 頁" width="1024" height="1536" fetchpriority="high" decoding="async" draggable="false" />
+        </figure>
+        <div class="image-error" id="image-error" hidden>
+          <p>這一頁暫時無法載入。</p>
+          <button class="retry-button" id="retry" type="button">重新載入</button>
+        </div>
+      </div>
+      <div class="continuous-pages" id="continuous-pages" hidden></div>
+
+      <div class="end-controls">
+        <span id="end-page-label">第 1 頁，共 42 頁</span>
+        <button class="end-next" id="end-next" type="button">下一頁 <span aria-hidden="true">→</span></button>
+      </div>
+      <p class="reader-hint" id="reader-hint">圖片左鍵下一頁、右鍵上一頁；亦可用 ← → 或左右滑動</p>
+    </main>
+
+    <dialog id="pages-dialog" aria-labelledby="dialog-title">
+      <div class="dialog-header">
+        <div><span class="dialog-eyebrow">達拉崩吧</span><h2 id="dialog-title">選擇頁面</h2></div>
+        <button class="close-button" id="close-pages" type="button" aria-label="關閉頁面一覽">×</button>
+      </div>
+      <div class="thumbnail-grid" id="thumbnail-grid"></div>
+    </dialog>
+  </body>
+</html>
